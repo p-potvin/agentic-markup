@@ -1,0 +1,132 @@
+/* Agentic Markup — Popup Styles */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --brand: #1d4ed8;
+  --brand-light: #dbeafe;
+  --surface: #ffffff;
+  --border: #e5e7eb;
+  --text: #111827;
+  --muted: #6b7280;
+  --radius: 6px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  color: var(--text);
+}
+
+body {
+  width: 340px;
+  background: var(--surface);
+}
+
+/* ── Header ─────────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--brand);
+  color: #fff;
+}
+
+.logo {
+  width: 22px;
+  height: 22px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+h1 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* ── Content ─────────────────────────────────────────── */
+.content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+/* ── Syntax guide ─────────────────────────────────────── */
+h2 {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.widget-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.widget-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #f9fafb;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 10px;
+}
+
+code.tag {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--brand);
+  word-break: break-all;
+}
+
+.desc {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ── Info block ───────────────────────────────────────── */
+.info {
+  background: var(--brand-light);
+  border: 1px solid #93c5fd;
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.info p {
+  font-size: 0.8rem;
+  color: #1e3a5f;
+  line-height: 1.5;
+}
+
+/* ── Footer ───────────────────────────────────────────── */
+.footer {
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+.footer a {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  color: var(--brand);
+  text-decoration: underline;
+}
