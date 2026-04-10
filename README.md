@@ -22,12 +22,15 @@ Plain text in DOM                Rendered output
 
 ## Markup Syntax
 
-Tell the AI to wrap its output in one of these markers:
+Tell the AI to wrap its output in one of these markers.
+
+Attributes use the `{key="value"}` format — a pair of curly braces immediately
+after the directive name, containing space-separated `key="value"` pairs.
 
 ### Collapse (collapsible section)
 
 ```
-:::collapse[Section Title]
+:::collapse{summary="Section Title"}
 Content that is hidden until the user clicks.
 :::
 ```
@@ -35,30 +38,30 @@ Content that is hidden until the user clicks.
 ### Callout (info / warning / error / success)
 
 ```
-:::callout[info]
+:::callout{variant="info"}
 This is an informational note.
 :::
 
-:::callout[warning]
+:::callout{variant="warning"}
 Something to be careful about.
 :::
 
-:::callout[error]
+:::callout{variant="error"}
 An error occurred.
 :::
 
-:::callout[success]
+:::callout{variant="success"}
 Operation completed successfully.
 :::
 ```
 
 ### Tabs (tabbed panel)
 
-Tab titles are declared in the header separated by `|`.  
+Tab titles are listed in the `titles` attribute, separated by `|`.  
 Tab bodies are separated by a line containing only `---`.
 
 ```
-:::tabs[Overview|Details|Examples]
+:::tabs{titles="Overview|Details|Examples"}
 High-level summary here.
 ---
 More detailed information.
@@ -69,9 +72,11 @@ Some code examples.
 
 ### Badge (inline pill)
 
+Badges are **leaf directives** — they open and close on the same line:
+
 ```
-Status: :::badge[Stable][success]:::
-Version: :::badge[v0.1.0][info]:::
+Status: :::badge{text="Stable" variant="success"}:::
+Version: :::badge{text="v0.1.0" variant="info"}:::
 ```
 
 Variants: `default` · `info` · `warning` · `error` · `success`
@@ -181,6 +186,34 @@ To add another platform, append its URL pattern to both `host_permissions` and `
 
 ## Technical notes
 
+### FSM tokenizer → AST pipeline
+
+Text is processed in two stages:
+
+1. **Tokenizer** (`src/tokenizer.js`) — a line-level Finite State Machine that
+   scans the character stream and emits a flat token array:
+   - `DIRECTIVE_OPEN`  — `:::name{attrs}` opening fence
+   - `DIRECTIVE_BODY`  — body lines accumulated between fences
+   - `DIRECTIVE_CLOSE` — `:::` closing fence
+   - `LEAF_DIRECTIVE`  — `:::name{attrs}:::` self-closing form
+   - `TEXT`            — plain text outside any directive
+
+   The FSM tracks **nesting depth** so inner directives (e.g. a `:::collapse`
+   nested inside `:::tabs`) do not prematurely close the outer scope.
+
+2. **Parser** (`src/parser.js`) — converts the flat token stream into an
+   **Abstract Syntax Tree** using a node stack:
+   - `root` — top-level document node
+   - `containerDirective` — block directive with `name`, `attributes`,
+     `rawBody`, and `children` (paragraph/text nodes)
+   - `leafDirective` — self-closing directive with `name` and `attributes`
+   - `paragraph` — a block of text within a directive body
+   - `text` — plain text value
+
+   `attributes` is a plain object parsed from the `{key="value"}` syntax.
+   `rawBody` stores the raw directive body verbatim for widgets (like `tabs`)
+   that need custom body splitting (e.g. `---` tab separators).
+
 ### VDOM-safe injection
 
 Reactive chat frontends (React, Angular, Vue) keep an in-memory Virtual DOM. Directly removing a text node causes reconciliation errors or silent overwrites on the next render tick. The content script avoids this by:
@@ -198,4 +231,4 @@ Every widget is mounted on a Shadow DOM host (`attachShadow({ mode: 'open' })`).
 
 ### Streaming support
 
-The MutationObserver listens for both `childList` and `characterData` mutations. The `hasIncompleteWidget()` helper detects a partial marker (e.g. `:::collap` still being streamed) and skips processing until the closing `:::` arrives.
+The MutationObserver listens for both `childList` and `characterData` mutations. The `hasIncompleteWidget()` helper uses the FSM tokenizer to count unmatched `DIRECTIVE_OPEN` vs `DIRECTIVE_CLOSE` tokens and defers hydration until the closing `:::` arrives.

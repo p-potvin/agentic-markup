@@ -1,17 +1,38 @@
 'use strict';
 
+const { getNodeText } = require('../parser');
+
 /**
  * Tabs Widget
  *
- * Renders a :::tabs[Tab 1|Tab 2] content1\n---\ncontent2 ::: marker as an
+ * Renders a :::tabs{titles="Tab 1|Tab 2"} … ::: containerDirective node as an
  * interactive tabbed panel.
  *
- * @param {{ titles: string[], tabs: string[] }} data
+ * Tab titles are declared in the `titles` attribute, separated by `|`.
+ * Tab bodies are delimited by a line containing only `---` within the directive
+ * body.  The rawBody string (stored verbatim on the AST node) is used for this
+ * split so blank-line paragraph parsing does not interfere.
+ *
+ * Expected AST node shape:
+ *   {
+ *     type: 'containerDirective',
+ *     name: 'tabs',
+ *     attributes: { titles: 'Tab 1|Tab 2' },
+ *     rawBody: 'Tab 1 content\n---\nTab 2 content',
+ *     children: [...],
+ *   }
+ *
+ * @param {Object} node  containerDirective AST node
  * @returns {HTMLElement} The widget host element.
  */
-function renderTabs(data) {
-  const titles = Array.isArray(data.titles) ? data.titles : [];
-  const tabs   = Array.isArray(data.tabs)   ? data.tabs   : [];
+function renderTabs(node) {
+  const titlesAttr = (node.attributes && node.attributes.titles) || '';
+  const titles = titlesAttr.split('|').map(t => t.trim()).filter(Boolean);
+
+  // Use rawBody for splitting on --- so blank-line paragraph parsing does not
+  // interfere with the tab separator.
+  const raw  = getNodeText(node);
+  const tabs = raw ? raw.split(/\n---\n/).map(t => t.trim()) : [];
 
   const host = document.createElement('span');
   host.classList.add('am-widget', 'am-tabs-host');
@@ -70,7 +91,6 @@ function renderTabs(data) {
   tabBar.classList.add('tab-bar');
 
   const panels = [];
-
   const panelContainer = document.createElement('div');
 
   titles.forEach((title, i) => {
@@ -108,3 +128,4 @@ function renderTabs(data) {
 }
 
 module.exports = { renderTabs };
+

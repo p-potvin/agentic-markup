@@ -1,18 +1,29 @@
 'use strict';
 
+const { getNodeText } = require('../parser');
+
 /**
  * Callout Widget
  *
- * Renders a :::callout[variant] content ::: marker as a styled alert box.
- * Variants: info (default) | warning | error | success
+ * Renders a :::callout{variant="info"} … ::: containerDirective node as a
+ * styled alert box with a variant-specific icon and colour scheme.
  *
- * @param {{ variant: string, content: string }} data
+ * Expected AST node shape:
+ *   {
+ *     type: 'containerDirective',
+ *     name: 'callout',
+ *     attributes: { variant: 'info' | 'warning' | 'error' | 'success' },
+ *     rawBody: string,
+ *     children: [...],
+ *   }
+ *
+ * @param {Object} node  containerDirective AST node
  * @returns {HTMLElement} The widget host element.
  */
-function renderCallout(data) {
-  const variant = ['info', 'warning', 'error', 'success'].includes(data.variant)
-    ? data.variant
-    : 'info';
+function renderCallout(node) {
+  const raw     = (node.attributes && node.attributes.variant) || 'info';
+  const variant = ['info', 'warning', 'error', 'success'].includes(raw) ? raw : 'info';
+  const content = getNodeText(node);
 
   const ICONS = {
     info: 'ℹ️',
@@ -63,7 +74,7 @@ function renderCallout(data) {
 
   const body = document.createElement('div');
   body.classList.add('body');
-  body.textContent = data.content || '';
+  body.textContent = content;
 
   callout.appendChild(icon);
   callout.appendChild(body);
@@ -74,3 +85,4 @@ function renderCallout(data) {
 }
 
 module.exports = { renderCallout };
+

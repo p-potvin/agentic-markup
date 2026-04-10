@@ -3,15 +3,26 @@
 /**
  * Badge Widget
  *
- * Renders a :::badge[text][variant]::: marker as a compact inline pill/badge.
- * Variants: default | info | warning | error | success
+ * Renders a :::badge{text="New" variant="success"}::: leafDirective node as a
+ * compact inline pill/badge.
  *
- * @param {{ text: string, variant: string }} data
+ * Expected AST node shape:
+ *   {
+ *     type: 'leafDirective',
+ *     name: 'badge',
+ *     attributes: { text: string, variant?: string },
+ *   }
+ *
+ * Variants: default (fallback) | info | warning | error | success
+ *
+ * @param {Object} node  leafDirective AST node
  * @returns {HTMLElement} The widget host element.
  */
-function renderBadge(data) {
-  const variant = ['default', 'info', 'warning', 'error', 'success'].includes(data.variant)
-    ? data.variant
+function renderBadge(node) {
+  const text    = (node.attributes && node.attributes.text)    || '';
+  const rawVar  = (node.attributes && node.attributes.variant) || 'default';
+  const variant = ['default', 'info', 'warning', 'error', 'success'].includes(rawVar)
+    ? rawVar
     : 'default';
 
   const COLORS = {
@@ -49,7 +60,7 @@ function renderBadge(data) {
 
   const badge = document.createElement('span');
   badge.classList.add('badge');
-  badge.textContent = data.text || '';
+  badge.textContent = text;
 
   shadow.appendChild(style);
   shadow.appendChild(badge);
@@ -58,3 +69,4 @@ function renderBadge(data) {
 }
 
 module.exports = { renderBadge };
+

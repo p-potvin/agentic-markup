@@ -5,56 +5,226 @@ var AgenticMarkup = (() => {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   };
 
+  // src/tokenizer.js
+  var require_tokenizer = __commonJS({
+    "src/tokenizer.js"(exports, module) {
+      "use strict";
+      var TOKEN = Object.freeze({
+        /** Plain text outside any directive. */
+        TEXT: "TEXT",
+        /** Opening fence of a block directive: :::name{attrs} */
+        DIRECTIVE_OPEN: "DIRECTIVE_OPEN",
+        /** One or more body lines accumulated inside a block directive. */
+        DIRECTIVE_BODY: "DIRECTIVE_BODY",
+        /** Closing fence of a block directive: ::: */
+        DIRECTIVE_CLOSE: "DIRECTIVE_CLOSE",
+        /** Self-closing leaf directive: :::name{attrs}::: */
+        LEAF_DIRECTIVE: "LEAF_DIRECTIVE"
+      });
+      var RE_LEAF_LINE = /^:::([\w-]+)(\{[^}]*\})?:::\s*$/;
+      var RE_OPEN_LINE = /^:::([\w-]+)(\{[^}]*\})?\s*$/;
+      var RE_CLOSE_LINE = /^:::\s*$/;
+      var RE_INLINE_LEAF = /:::([\w-]+)(\{[^}]*\})?:::/g;
+      function parseAttributes(raw) {
+        const attrs = {};
+        if (!raw)
+          return attrs;
+        const inner = raw.slice(1, -1);
+        const re = /([\w-]+)\s*=\s*(?:"([^"]*)"|([^\s}"']*))/g;
+        let m;
+        while ((m = re.exec(inner)) !== null) {
+          attrs[m[1]] = m[2] !== void 0 ? m[2] : m[3];
+        }
+        return attrs;
+      }
+      function tokenize(text) {
+        const tokens = [];
+        const lines = text.split("\n");
+        let state = "OUTER";
+        let depth = 0;
+        const textBuf = [];
+        const bodyBuf = [];
+        function flushText() {
+          if (textBuf.length === 0)
+            return;
+          const value = textBuf.join("\n");
+          textBuf.length = 0;
+          if (value === "")
+            return;
+          tokens.push({ type: TOKEN.TEXT, value });
+        }
+        function flushBody() {
+          if (bodyBuf.length === 0)
+            return;
+          tokens.push({ type: TOKEN.DIRECTIVE_BODY, value: bodyBuf.join("\n") });
+          bodyBuf.length = 0;
+        }
+        for (const line of lines) {
+          if (state === "OUTER") {
+            if (RE_LEAF_LINE.test(line)) {
+              flushText();
+              const m = RE_LEAF_LINE.exec(line);
+              tokens.push({
+                type: TOKEN.LEAF_DIRECTIVE,
+                name: m[1],
+                attributes: parseAttributes(m[2])
+              });
+            } else if (RE_OPEN_LINE.test(line)) {
+              flushText();
+              const m = RE_OPEN_LINE.exec(line);
+              tokens.push({
+                type: TOKEN.DIRECTIVE_OPEN,
+                name: m[1],
+                attributes: parseAttributes(m[2])
+              });
+              depth++;
+              state = "IN_BLOCK";
+            } else {
+              RE_INLINE_LEAF.lastIndex = 0;
+              if (RE_INLINE_LEAF.test(line)) {
+                flushText();
+                RE_INLINE_LEAF.lastIndex = 0;
+                let last = 0;
+                let m;
+                while ((m = RE_INLINE_LEAF.exec(line)) !== null) {
+                  if (m.index > last) {
+                    tokens.push({ type: TOKEN.TEXT, value: line.slice(last, m.index) });
+                  }
+                  tokens.push({
+                    type: TOKEN.LEAF_DIRECTIVE,
+                    name: m[1],
+                    attributes: parseAttributes(m[2])
+                  });
+                  last = m.index + m[0].length;
+                }
+                if (last < line.length) {
+                  tokens.push({ type: TOKEN.TEXT, value: line.slice(last) });
+                }
+              } else {
+                textBuf.push(line);
+              }
+            }
+          } else {
+            if (RE_CLOSE_LINE.test(line)) {
+              flushBody();
+              tokens.push({ type: TOKEN.DIRECTIVE_CLOSE });
+              depth--;
+              if (depth === 0) {
+                state = "OUTER";
+              }
+            } else if (RE_OPEN_LINE.test(line)) {
+              flushBody();
+              const m = RE_OPEN_LINE.exec(line);
+              tokens.push({
+                type: TOKEN.DIRECTIVE_OPEN,
+                name: m[1],
+                attributes: parseAttributes(m[2])
+              });
+              depth++;
+            } else {
+              bodyBuf.push(line);
+            }
+          }
+        }
+        flushBody();
+        flushText();
+        return tokens;
+      }
+      module.exports = { tokenize, parseAttributes, TOKEN };
+    }
+  });
+
   // src/parser.js
   var require_parser = __commonJS({
     "src/parser.js"(exports, module) {
       "use strict";
-      var WIDGET_RE = /:::(collapse|callout|tabs|badge)\[([^\]]+)\](?:\[([^\]]*)\])?([\s\S]*?):::/g;
+      var { tokenize, TOKEN } = require_tokenizer();
+      function bodyToParagraphs(bodyText) {
+        if (!bodyText || !bodyText.trim())
+          return [];
+        const normalised = bodyText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        return normalised.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean).map((block) => ({
+          type: "paragraph",
+          children: [{ type: "text", value: block }]
+        }));
+      }
+      function getNodeText(node) {
+        if (!node)
+          return "";
+        if (node.type === "text")
+          return node.value || "";
+        if (node.rawBody !== void 0)
+          return node.rawBody;
+        if (Array.isArray(node.children)) {
+          return node.children.map(getNodeText).filter(Boolean).join("\n");
+        }
+        return "";
+      }
       function parse(text) {
-        const segments = [];
-        let lastIndex = 0;
-        const re = new RegExp(WIDGET_RE.source, WIDGET_RE.flags);
-        let match;
-        while ((match = re.exec(text)) !== null) {
-          if (match.index > lastIndex) {
-            segments.push({ type: "text", content: text.slice(lastIndex, match.index) });
-          }
-          const [fullMatch, widgetType, arg1, arg2, rawContent] = match;
-          const content = rawContent ? rawContent.trim() : "";
-          switch (widgetType) {
-            case "collapse":
-              segments.push({ type: "collapse", title: arg1, content });
-              break;
-            case "callout":
-              segments.push({ type: "callout", variant: arg1 || "info", content });
-              break;
-            case "tabs": {
-              const titles = arg1.split("|").map((t) => t.trim()).filter(Boolean);
-              const tabs = parseTabContent(content);
-              segments.push({ type: "tabs", titles, tabs });
+        const tokens = tokenize(text);
+        const root = { type: "root", children: [] };
+        const stack = [root];
+        function current() {
+          return stack[stack.length - 1];
+        }
+        for (const token of tokens) {
+          switch (token.type) {
+            case TOKEN.TEXT: {
+              current().children.push({ type: "text", value: token.value });
               break;
             }
-            case "badge":
-              segments.push({ type: "badge", text: arg1, variant: arg2 || "default" });
+            case TOKEN.DIRECTIVE_OPEN: {
+              const node = {
+                type: "containerDirective",
+                name: token.name,
+                attributes: token.attributes,
+                rawBody: "",
+                children: []
+              };
+              current().children.push(node);
+              stack.push(node);
               break;
+            }
+            case TOKEN.DIRECTIVE_BODY: {
+              const node = current();
+              if (node.rawBody !== void 0) {
+                node.rawBody = node.rawBody ? node.rawBody + "\n" + token.value : token.value;
+              }
+              const paragraphs = bodyToParagraphs(token.value);
+              paragraphs.forEach((p) => node.children.push(p));
+              break;
+            }
+            case TOKEN.DIRECTIVE_CLOSE: {
+              if (stack.length > 1)
+                stack.pop();
+              break;
+            }
+            case TOKEN.LEAF_DIRECTIVE: {
+              current().children.push({
+                type: "leafDirective",
+                name: token.name,
+                attributes: token.attributes
+              });
+              break;
+            }
             default:
-              segments.push({ type: "text", content: fullMatch });
+              break;
           }
-          lastIndex = match.index + fullMatch.length;
         }
-        if (lastIndex < text.length) {
-          segments.push({ type: "text", content: text.slice(lastIndex) });
-        }
-        return segments;
-      }
-      function parseTabContent(content) {
-        return content.split(/\n---\n/).map((c) => c.trim());
+        return root;
       }
       function hasIncompleteWidget(text) {
-        const stripped = text.replace(new RegExp(WIDGET_RE.source, WIDGET_RE.flags), "");
-        return /:::[a-z]/.test(stripped);
+        const tokens = tokenize(text);
+        let depth = 0;
+        for (const t of tokens) {
+          if (t.type === TOKEN.DIRECTIVE_OPEN)
+            depth++;
+          if (t.type === TOKEN.DIRECTIVE_CLOSE)
+            depth--;
+        }
+        return depth > 0;
       }
-      module.exports = { parse, parseTabContent, hasIncompleteWidget };
+      module.exports = { parse, getNodeText, bodyToParagraphs, hasIncompleteWidget };
     }
   });
 
@@ -62,7 +232,10 @@ var AgenticMarkup = (() => {
   var require_collapse = __commonJS({
     "src/widgets/collapse.js"(exports, module) {
       "use strict";
-      function renderCollapse(data) {
+      var { getNodeText } = require_parser();
+      function renderCollapse(node) {
+        const title = node.attributes && node.attributes.summary || "Details";
+        const content = getNodeText(node);
         const host = document.createElement("span");
         host.classList.add("am-widget", "am-collapse-host");
         const shadow = host.attachShadow({ mode: "open" });
@@ -110,10 +283,10 @@ var AgenticMarkup = (() => {
   `;
         const details = document.createElement("details");
         const summary = document.createElement("summary");
-        summary.textContent = data.title || "Details";
+        summary.textContent = title;
         const contentDiv = document.createElement("div");
         contentDiv.classList.add("content");
-        contentDiv.textContent = data.content || "";
+        contentDiv.textContent = content;
         details.appendChild(summary);
         details.appendChild(contentDiv);
         shadow.appendChild(style);
@@ -128,8 +301,11 @@ var AgenticMarkup = (() => {
   var require_callout = __commonJS({
     "src/widgets/callout.js"(exports, module) {
       "use strict";
-      function renderCallout(data) {
-        const variant = ["info", "warning", "error", "success"].includes(data.variant) ? data.variant : "info";
+      var { getNodeText } = require_parser();
+      function renderCallout(node) {
+        const raw = node.attributes && node.attributes.variant || "info";
+        const variant = ["info", "warning", "error", "success"].includes(raw) ? raw : "info";
+        const content = getNodeText(node);
         const ICONS = {
           info: "\u2139\uFE0F",
           warning: "\u26A0\uFE0F",
@@ -172,7 +348,7 @@ var AgenticMarkup = (() => {
         icon.textContent = ICONS[variant];
         const body = document.createElement("div");
         body.classList.add("body");
-        body.textContent = data.content || "";
+        body.textContent = content;
         callout.appendChild(icon);
         callout.appendChild(body);
         shadow.appendChild(style);
@@ -187,9 +363,12 @@ var AgenticMarkup = (() => {
   var require_tabs = __commonJS({
     "src/widgets/tabs.js"(exports, module) {
       "use strict";
-      function renderTabs(data) {
-        const titles = Array.isArray(data.titles) ? data.titles : [];
-        const tabs = Array.isArray(data.tabs) ? data.tabs : [];
+      var { getNodeText } = require_parser();
+      function renderTabs(node) {
+        const titlesAttr = node.attributes && node.attributes.titles || "";
+        const titles = titlesAttr.split("|").map((t) => t.trim()).filter(Boolean);
+        const raw = getNodeText(node);
+        const tabs = raw ? raw.split(/\n---\n/).map((t) => t.trim()) : [];
         const host = document.createElement("span");
         host.classList.add("am-widget", "am-tabs-host");
         const shadow = host.attachShadow({ mode: "open" });
@@ -279,8 +458,10 @@ var AgenticMarkup = (() => {
   var require_badge = __commonJS({
     "src/widgets/badge.js"(exports, module) {
       "use strict";
-      function renderBadge(data) {
-        const variant = ["default", "info", "warning", "error", "success"].includes(data.variant) ? data.variant : "default";
+      function renderBadge(node) {
+        const text = node.attributes && node.attributes.text || "";
+        const rawVar = node.attributes && node.attributes.variant || "default";
+        const variant = ["default", "info", "warning", "error", "success"].includes(rawVar) ? rawVar : "default";
         const COLORS = {
           default: { bg: "#f3f4f6", border: "#d1d5db", text: "#374151" },
           info: { bg: "#dbeafe", border: "#93c5fd", text: "#1e40af" },
@@ -312,7 +493,7 @@ var AgenticMarkup = (() => {
   `;
         const badge = document.createElement("span");
         badge.classList.add("badge");
-        badge.textContent = data.text || "";
+        badge.textContent = text;
         shadow.appendChild(style);
         shadow.appendChild(badge);
         return host;
@@ -330,16 +511,18 @@ var AgenticMarkup = (() => {
       var { renderCallout } = require_callout();
       var { renderTabs } = require_tabs();
       var { renderBadge } = require_badge();
-      function buildWidget(segment) {
-        switch (segment.type) {
+      function buildWidget(node) {
+        if (!node || !node.name)
+          return null;
+        switch (node.name) {
           case "collapse":
-            return renderCollapse(segment);
+            return renderCollapse(node);
           case "callout":
-            return renderCallout(segment);
+            return renderCallout(node);
           case "tabs":
-            return renderTabs(segment);
+            return renderTabs(node);
           case "badge":
-            return renderBadge(segment);
+            return renderBadge(node);
           default:
             return null;
         }
@@ -348,8 +531,10 @@ var AgenticMarkup = (() => {
         const text = textNode.textContent;
         if (!text || !text.includes(":::"))
           return;
-        const segments = parse(text);
-        const hasWidgets = segments.some((s) => s.type !== "text");
+        const ast = parse(text);
+        const hasWidgets = ast.children.some(
+          (n) => n.type === "containerDirective" || n.type === "leafDirective"
+        );
         if (!hasWidgets)
           return;
         const parent = textNode.parentNode;
@@ -361,20 +546,20 @@ var AgenticMarkup = (() => {
         parent.insertBefore(hiddenWrapper, textNode);
         hiddenWrapper.appendChild(textNode);
         const fragment = document.createDocumentFragment();
-        for (const segment of segments) {
-          if (segment.type === "text") {
-            if (segment.content) {
-              fragment.appendChild(document.createTextNode(segment.content));
+        for (const node of ast.children) {
+          if (node.type === "text") {
+            if (node.value) {
+              fragment.appendChild(document.createTextNode(node.value));
             }
-          } else {
-            const widget = buildWidget(segment);
+          } else if (node.type === "containerDirective" || node.type === "leafDirective") {
+            const widget = buildWidget(node);
             if (widget) {
-              widget.setAttribute("data-am-widget", segment.type);
+              widget.setAttribute("data-am-widget", node.name);
               fragment.appendChild(widget);
             }
           }
         }
-        hiddenWrapper.insertAdjacentElement ? hiddenWrapper.after(fragment) : parent.insertBefore(fragment, hiddenWrapper.nextSibling);
+        parent.insertBefore(fragment, hiddenWrapper.nextSibling);
       }
       function scanAndHydrate(root) {
         const walker = document.createTreeWalker(

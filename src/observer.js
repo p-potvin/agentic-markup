@@ -7,17 +7,22 @@ const { renderTabs }     = require('./widgets/tabs');
 const { renderBadge }    = require('./widgets/badge');
 
 /**
- * Map a parsed segment to a DOM element.
+ * Map an AST directive node to a DOM element.
  *
- * @param {Object} segment - A segment returned by parse().
+ * Dispatches on `node.name` (the directive type) for both containerDirective
+ * and leafDirective nodes.  Returns null for plain text nodes and any
+ * unrecognised directive names.
+ *
+ * @param {Object} node  AST node (containerDirective or leafDirective)
  * @returns {HTMLElement|null}
  */
-function buildWidget(segment) {
-  switch (segment.type) {
-    case 'collapse': return renderCollapse(segment);
-    case 'callout':  return renderCallout(segment);
-    case 'tabs':     return renderTabs(segment);
-    case 'badge':    return renderBadge(segment);
+function buildWidget(node) {
+  if (!node || !node.name) return null;
+  switch (node.name) {
+    case 'collapse': return renderCollapse(node);
+    case 'callout':  return renderCallout(node);
+    case 'tabs':     return renderTabs(node);
+    case 'badge':    return renderBadge(node);
     default:         return null;
   }
 }
@@ -26,12 +31,12 @@ function buildWidget(segment) {
  * Hydrate a single text node that contains one or more widget markers.
  *
  * Strategy (VDOM-safe):
- *  1. Parse the full textContent into segments.
+ *  1. Parse the full textContent into an AST.
  *  2. Wrap the original text node in a hidden <span> so the host framework
  *     still sees the original node in the DOM.
- *  3. For each segment, insert an adjacent sibling:
- *     - plain text segments → a new text node
- *     - widget segments     → a Shadow-DOM host element
+ *  3. Walk the AST root's children and insert adjacent siblings:
+ *     - text nodes        → plain DOM Text nodes
+ *     - directive nodes   → Shadow-DOM widget host elements
  *  4. Mark the wrapper so we never process the same node twice.
  *
  * @param {Text} textNode - A DOM Text node to hydrate.
@@ -42,10 +47,12 @@ function hydrateTextNode(textNode) {
   // Skip empty or already-processed nodes.
   if (!text || !text.includes(':::')) return;
 
-  const segments = parse(text);
+  const ast = parse(text);
 
-  // If nothing changed (no widgets parsed), bail out.
-  const hasWidgets = segments.some(s => s.type !== 'text');
+  // Bail out if the AST has no directive nodes (nothing to hydrate).
+  const hasWidgets = ast.children.some(
+    n => n.type === 'containerDirective' || n.type === 'leafDirective'
+  );
   if (!hasWidgets) return;
 
   const parent = textNode.parentNode;
@@ -58,27 +65,28 @@ function hydrateTextNode(textNode) {
   parent.insertBefore(hiddenWrapper, textNode);
   hiddenWrapper.appendChild(textNode);
 
-  // 2. Insert the hydrated segments as siblings after the hidden wrapper.
+  // 2. Build a fragment from the AST's top-level children.
   const fragment = document.createDocumentFragment();
 
-  for (const segment of segments) {
-    if (segment.type === 'text') {
-      if (segment.content) {
-        fragment.appendChild(document.createTextNode(segment.content));
+  for (const node of ast.children) {
+    if (node.type === 'text') {
+      if (node.value) {
+        fragment.appendChild(document.createTextNode(node.value));
       }
-    } else {
-      const widget = buildWidget(segment);
+    } else if (
+      node.type === 'containerDirective' ||
+      node.type === 'leafDirective'
+    ) {
+      const widget = buildWidget(node);
       if (widget) {
-        widget.setAttribute('data-am-widget', segment.type);
+        widget.setAttribute('data-am-widget', node.name);
         fragment.appendChild(widget);
       }
     }
   }
 
-  // Insert all new nodes after the hidden wrapper.
-  hiddenWrapper.insertAdjacentElement
-    ? hiddenWrapper.after(fragment)
-    : parent.insertBefore(fragment, hiddenWrapper.nextSibling);
+  // 3. Insert all new nodes after the hidden wrapper.
+  parent.insertBefore(fragment, hiddenWrapper.nextSibling);
 }
 
 /**
@@ -115,7 +123,7 @@ function scanAndHydrate(root) {
 
   // Hydrate outside the walker loop to avoid invalidating its internal cursor.
   for (const tn of textNodes) {
-    // Skip nodes that are already streaming (incomplete widget).
+    // Skip nodes that are still streaming (incomplete widget).
     if (hasIncompleteWidget(tn.textContent)) continue;
     hydrateTextNode(tn);
   }
@@ -176,3 +184,4 @@ function attachObserver(targetNode) {
 }
 
 module.exports = { attachObserver, hydrateTextNode, scanAndHydrate, buildWidget };
+

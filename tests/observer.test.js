@@ -2,35 +2,52 @@
 
 const { hydrateTextNode, scanAndHydrate, buildWidget, attachObserver } = require('../src/observer');
 
+// ── buildWidget() ──────────────────────────────────────────────────────────────
+
 describe('buildWidget()', () => {
-  test('returns an element for collapse segment', () => {
-    const el = buildWidget({ type: 'collapse', title: 'T', content: 'C' });
+  function makeContainer(name, attributes, rawBody) {
+    return {
+      type: 'containerDirective', name,
+      attributes: attributes || {},
+      rawBody: rawBody || '',
+      children: [],
+    };
+  }
+  function makeLeaf(name, attributes) {
+    return { type: 'leafDirective', name, attributes: attributes || {} };
+  }
+
+  test('returns an element for collapse containerDirective', () => {
+    const el = buildWidget(makeContainer('collapse', { summary: 'T' }, 'body'));
     expect(el).toBeInstanceOf(HTMLElement);
   });
 
-  test('returns an element for callout segment', () => {
-    const el = buildWidget({ type: 'callout', variant: 'info', content: 'C' });
+  test('returns an element for callout containerDirective', () => {
+    const el = buildWidget(makeContainer('callout', { variant: 'info' }, 'C'));
     expect(el).toBeInstanceOf(HTMLElement);
   });
 
-  test('returns an element for tabs segment', () => {
-    const el = buildWidget({ type: 'tabs', titles: ['A'], tabs: ['body'] });
+  test('returns an element for tabs containerDirective', () => {
+    const el = buildWidget(makeContainer('tabs', { titles: 'A|B' }, 'body A\n---\nbody B'));
     expect(el).toBeInstanceOf(HTMLElement);
   });
 
-  test('returns an element for badge segment', () => {
-    const el = buildWidget({ type: 'badge', text: 'New', variant: 'default' });
+  test('returns an element for badge leafDirective', () => {
+    const el = buildWidget(makeLeaf('badge', { text: 'New', variant: 'default' }));
     expect(el).toBeInstanceOf(HTMLElement);
   });
 
-  test('returns null for text segment', () => {
-    expect(buildWidget({ type: 'text', content: 'hello' })).toBeNull();
+  test('returns null for a node with no name', () => {
+    expect(buildWidget({})).toBeNull();
+    expect(buildWidget(null)).toBeNull();
   });
 
-  test('returns null for unknown segment type', () => {
-    expect(buildWidget({ type: 'unknown' })).toBeNull();
+  test('returns null for an unrecognised directive name', () => {
+    expect(buildWidget(makeContainer('unknown', {}, ''))).toBeNull();
   });
 });
+
+// ── hydrateTextNode() ──────────────────────────────────────────────────────────
 
 describe('hydrateTextNode()', () => {
   function createTextNodeInDiv(text) {
@@ -52,7 +69,9 @@ describe('hydrateTextNode()', () => {
   });
 
   test('wraps original text node in a hidden span', () => {
-    const { div, tn } = createTextNodeInDiv(':::collapse[T] body :::');
+    const { div, tn } = createTextNodeInDiv(
+      ':::collapse{summary="T"}\nbody\n:::'
+    );
     hydrateTextNode(tn);
     const hidden = div.querySelector('[data-am-original]');
     expect(hidden).not.toBeNull();
@@ -60,24 +79,26 @@ describe('hydrateTextNode()', () => {
   });
 
   test('original text node is moved inside the hidden span', () => {
-    const { div, tn } = createTextNodeInDiv(':::collapse[T] body :::');
+    const { div, tn } = createTextNodeInDiv(
+      ':::collapse{summary="T"}\nbody\n:::'
+    );
     hydrateTextNode(tn);
     const hidden = div.querySelector('[data-am-original]');
     expect(hidden.contains(tn)).toBe(true);
   });
 
   test('inserts widget element as sibling after hidden span', () => {
-    const { div } = createTextNodeInDiv(':::callout[info] Note :::');
-    const tn = div.firstChild;
-    hydrateTextNode(tn);
+    const { div } = createTextNodeInDiv(
+      ':::callout{variant="info"}\nNote\n:::'
+    );
+    hydrateTextNode(div.firstChild);
     const widget = div.querySelector('[data-am-widget="callout"]');
     expect(widget).not.toBeNull();
   });
 
   test('preserves surrounding plain text as text nodes', () => {
-    const { div } = createTextNodeInDiv('Before :::badge[X]::: After');
+    const { div } = createTextNodeInDiv('Before :::badge{text="X"}::: After');
     hydrateTextNode(div.firstChild);
-    // The div should now contain: hidden-span | "Before " text | badge widget | " After" text
     const textContent = Array.from(div.childNodes)
       .filter(n => n.nodeType === Node.TEXT_NODE)
       .map(n => n.textContent)
@@ -87,11 +108,12 @@ describe('hydrateTextNode()', () => {
   });
 
   test('does nothing when text node has no parent', () => {
-    const tn = document.createTextNode(':::collapse[T] body :::');
-    // No parent — should not throw
+    const tn = document.createTextNode(':::collapse{summary="T"}\nbody\n:::');
     expect(() => hydrateTextNode(tn)).not.toThrow();
   });
 });
+
+// ── scanAndHydrate() ───────────────────────────────────────────────────────────
 
 describe('scanAndHydrate()', () => {
   afterEach(() => {
@@ -100,7 +122,7 @@ describe('scanAndHydrate()', () => {
 
   test('hydrates a text node inside a container', () => {
     const div = document.createElement('div');
-    div.textContent = ':::callout[success] Done :::';
+    div.textContent = ':::callout{variant="success"}\nDone\n:::';
     document.body.appendChild(div);
 
     scanAndHydrate(div);
@@ -113,13 +135,12 @@ describe('scanAndHydrate()', () => {
     const div = document.createElement('div');
     const wrapper = document.createElement('span');
     wrapper.setAttribute('data-am-original', 'true');
-    wrapper.textContent = ':::collapse[T] body :::';
+    wrapper.textContent = ':::collapse{summary="T"}\nbody\n:::';
     div.appendChild(wrapper);
     document.body.appendChild(div);
 
     scanAndHydrate(div);
 
-    // The inner text should NOT be re-processed
     const hidden = div.querySelectorAll('[data-am-original]');
     expect(hidden).toHaveLength(1);
   });
@@ -128,16 +149,17 @@ describe('scanAndHydrate()', () => {
     const div = document.createElement('div');
     const widgetHost = document.createElement('span');
     widgetHost.setAttribute('data-am-widget', 'callout');
-    widgetHost.textContent = ':::collapse[T] body :::';
+    widgetHost.textContent = ':::collapse{summary="T"}\nbody\n:::';
     div.appendChild(widgetHost);
     document.body.appendChild(div);
 
     scanAndHydrate(div);
 
-    // Should not create another widget inside
     expect(div.querySelectorAll('[data-am-widget]')).toHaveLength(1);
   });
 });
+
+// ── attachObserver() ───────────────────────────────────────────────────────────
 
 describe('attachObserver()', () => {
   afterEach(() => {
@@ -154,7 +176,7 @@ describe('attachObserver()', () => {
 
   test('immediately hydrates existing markup in the target', () => {
     const container = document.createElement('div');
-    container.textContent = ':::callout[info] Immediate :::';
+    container.textContent = ':::callout{variant="info"}\nImmediate\n:::';
     document.body.appendChild(container);
 
     const obs = attachObserver(container);
@@ -168,10 +190,9 @@ describe('attachObserver()', () => {
     document.body.appendChild(container);
     const obs = attachObserver(container);
 
-    const tn = document.createTextNode(':::badge[Dynamic]:::');
+    const tn = document.createTextNode(':::badge{text="Dynamic"}:::');
     container.appendChild(tn);
 
-    // Flush pending microtasks so the MutationObserver callback fires.
     await Promise.resolve();
 
     const widget = container.querySelector('[data-am-widget="badge"]');
@@ -185,7 +206,7 @@ describe('attachObserver()', () => {
     const obs = attachObserver(container);
 
     const child = document.createElement('p');
-    child.textContent = ':::collapse[Dynamic] body :::';
+    child.textContent = ':::collapse{summary="Dynamic"}\nbody\n:::';
     container.appendChild(child);
 
     await Promise.resolve();
@@ -195,3 +216,4 @@ describe('attachObserver()', () => {
     obs.disconnect();
   });
 });
+

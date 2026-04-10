@@ -1,15 +1,30 @@
 'use strict';
 
+const { getNodeText } = require('../parser');
+
 /**
  * Collapse Widget
  *
- * Renders a :::collapse[Title] content ::: marker as a native <details>/<summary>
- * element wrapped in a Shadow DOM host, isolating its styles from the host page.
+ * Renders a :::collapse{summary="Title"} … ::: containerDirective node as a
+ * native <details>/<summary> element wrapped in a Shadow DOM host, isolating
+ * its styles from the host page.
  *
- * @param {{ title: string, content: string }} data
+ * Expected AST node shape:
+ *   {
+ *     type: 'containerDirective',
+ *     name: 'collapse',
+ *     attributes: { summary: string },
+ *     rawBody: string,
+ *     children: [...],
+ *   }
+ *
+ * @param {Object} node  containerDirective AST node
  * @returns {HTMLElement} The widget host element (not yet attached to the DOM).
  */
-function renderCollapse(data) {
+function renderCollapse(node) {
+  const title   = (node.attributes && node.attributes.summary) || 'Details';
+  const content = getNodeText(node);
+
   const host = document.createElement('span');
   host.classList.add('am-widget', 'am-collapse-host');
 
@@ -60,11 +75,11 @@ function renderCollapse(data) {
 
   const details = document.createElement('details');
   const summary = document.createElement('summary');
-  summary.textContent = data.title || 'Details';
+  summary.textContent = title;
 
   const contentDiv = document.createElement('div');
   contentDiv.classList.add('content');
-  contentDiv.textContent = data.content || '';
+  contentDiv.textContent = content;
 
   details.appendChild(summary);
   details.appendChild(contentDiv);
@@ -75,3 +90,4 @@ function renderCollapse(data) {
 }
 
 module.exports = { renderCollapse };
+
