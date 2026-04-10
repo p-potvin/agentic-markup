@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agentic Markup</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="header">
+    <svg class="logo" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+    </svg>
+    <h1>Agentic Markup</h1>
+  </header>
+
+  <main class="content">
+    <p class="subtitle">Active on this page</p>
+
+    <section class="syntax-guide">
+      <h2>Markup Syntax</h2>
+      <ul class="widget-list">
+        <li>
+          <code class="tag">:::collapse[Title] ... :::</code>
+          <span class="desc">Collapsible section</span>
+        </li>
+        <li>
+          <code class="tag">:::callout[info|warning|error|success] ... :::</code>
+          <span class="desc">Callout box</span>
+        </li>
+        <li>
+          <code class="tag">:::tabs[Tab 1|Tab 2] content\n---\ncontent :::</code>
+          <span class="desc">Tabbed panel</span>
+        </li>
+        <li>
+          <code class="tag">:::badge[text][variant]:::</code>
+          <span class="desc">Inline badge</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="info">
+      <p>Ask the AI assistant to wrap its response in one of the markers above to get a rich interactive component.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <a href="https://github.com/p-potvin/agentic-markup" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
