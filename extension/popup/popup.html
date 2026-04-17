@@ -3,21 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Agentic Markup</title>
+  <title>VaultWares - Agentic Markup</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
   <header class="header">
+    <!-- Simplistic logo approach per rules, using SVG matching color theme -->
     <svg class="logo" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
       <path d="M2 17l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
       <path d="M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
     </svg>
-    <h1>Agentic Markup</h1>
+    <h1>VaultWares</h1>
   </header>
 
   <main class="content">
-    <p class="subtitle">Active on this page</p>
+    <p class="subtitle" id="status-label">Active on this page</p>
 
     <section class="syntax-guide">
       <h2>Markup Syntax</h2>
@@ -42,12 +43,12 @@
     </section>
 
     <section class="info">
-      <p>Ask the AI assistant to wrap its response in one of the markers above to get a rich interactive component.</p>
+      <p>Ask the AI assistant to wrap its response in one of the markers above to get a rich interactive component. Functionality for everyone.</p>
     </section>
   </main>
 
   <footer class="footer">
-    <a href="https://github.com/p-potvin/agentic-markup" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/p-potvin/agentic-markup" target="_blank" rel="noopener">Built under VaultWares Enterprise Guidelines</a>
   </footer>
 
   <script src="popup.js"></script>
