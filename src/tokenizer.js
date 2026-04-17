@@ -84,7 +84,7 @@ const RE_ATTRIBUTES = /([\w-]+)\s*=\s*(?:"([^"]*)"|([^\s}"']*))/g;
  * @returns {Object} Parsed attribute map (empty object if raw is absent/empty).
  */
 function parseAttributes(raw) {
-  const attrs = {};
+  const attrs = Object.create(null);
   if (!raw) return attrs;
   const inner = raw.slice(1, -1); // strip surrounding { }
 
