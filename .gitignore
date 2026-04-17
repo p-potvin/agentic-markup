@@ -33,3 +33,4 @@ coverage/
 *.sln
 *.sw?
 .DS_Store
+extension/extension.zip
