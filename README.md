@@ -1,4 +1,4 @@
-# agentic_markup
+# agentic-markup
 
 A browser extension (Chrome & Firefox) using a proprietary markup language to further customize in-browser agent responses.
 
@@ -174,7 +174,7 @@ The extension is currently configured to activate on:
 
 | Platform | URL |
 |---|---|
-| ChatGPT | `chatgpt.com`, `chat.openai.com`, `codex.ai` |
+| ChatGPT | `chatgpt.com`, `chat.openai.com` |
 | Claude | `claude.ai` |
 | Gemini | `gemini.google.com` |
 | Microsoft Copilot | `copilot.microsoft.com` |

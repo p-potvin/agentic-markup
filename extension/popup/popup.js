@@ -1,5 +1,5 @@
 /**
- * VaultWares Agentic Markup — Popup Script
+ * Agentic Markup — Popup Script
  *
  * Queries the active tab to check whether the content script is running and
  * whether any widgets have been hydrated on the current page.
@@ -23,9 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
 
     const isSupported = SUPPORTED.some(host => url.includes(host));
-    // Updated text to reflect English / French priority per guidelines
     subtitle.textContent = isSupported
-      ? 'ACTIVE • ACTIF'
-      : 'INACTIVE • INACTIF';
+      ? '✅ Active on this page'
+      : '⏸ Not active on this page';
   });
 });

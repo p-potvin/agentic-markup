@@ -64,13 +64,6 @@ const RE_CLOSE_LINE = /^:::\s*$/;
 // NOTE: this regex is used with exec() in a loop — always reset lastIndex.
 const RE_INLINE_LEAF = /:::([\w-]+)(\{[^}]*\})?:::/g;
 
-// Matches:  key = "quoted value"   OR   key = unquoted
-// Unquoted values may contain any character that is not whitespace,
-// a closing brace, a double-quote, or a single-quote (e.g. word chars,
-// hyphens, underscores, pipes, and dots).
-// NOTE: this regex is used with exec() in a loop — always reset lastIndex.
-const RE_ATTRIBUTES = /([\w-]+)\s*=\s*(?:"([^"]*)"|([^\s}"']*))/g;
-
 // ── Attribute parser ──────────────────────────────────────────────────────────
 
 /**
@@ -84,13 +77,16 @@ const RE_ATTRIBUTES = /([\w-]+)\s*=\s*(?:"([^"]*)"|([^\s}"']*))/g;
  * @returns {Object} Parsed attribute map (empty object if raw is absent/empty).
  */
 function parseAttributes(raw) {
-  const attrs = Object.create(null);
+  const attrs = {};
   if (!raw) return attrs;
   const inner = raw.slice(1, -1); // strip surrounding { }
-
-  RE_ATTRIBUTES.lastIndex = 0;
+  // Matches:  key = "quoted value"   OR   key = unquoted
+  // Unquoted values may contain any character that is not whitespace,
+  // a closing brace, a double-quote, or a single-quote (e.g. word chars,
+  // hyphens, underscores, pipes, and dots).
+  const re = /([\w-]+)\s*=\s*(?:"([^"]*)"|([^\s}"']*))/g;
   let m;
-  while ((m = RE_ATTRIBUTES.exec(inner)) !== null) {
+  while ((m = re.exec(inner)) !== null) {
     // m[2] is the quoted value; m[3] is the unquoted value
     attrs[m[1]] = m[2] !== undefined ? m[2] : m[3];
   }
