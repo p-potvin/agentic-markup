@@ -1,0 +1,4 @@
+## 2026-05-06 - [Security Fix: Prototype Pollution in parseAttributes]
+**Vulnerability:** Prototype pollution vulnerability in `parseAttributes` function in `src/tokenizer.js`.
+**Learning:** The attribute parser returns a standard JavaScript object `{}`. This allows attackers to override built-in prototype properties like `__proto__` or `constructor` via malicious attributes in the proprietary markup language, potentially leading to arbitrary code execution or unexpected behavior when these attributes are processed.
+**Prevention:** Always instantiate objects used for parsing untrusted input (like external attributes) using `Object.create(null)` instead of the literal `{}`. This creates an object with no prototype, protecting against prototype pollution and shadowing of standard Object properties.
