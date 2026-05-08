@@ -2,6 +2,20 @@
 
 A browser extension (Chrome & Firefox) using a proprietary markup language to further customize in-browser agent responses.
 
+
+## Features
+
+- **Custom Plain-Text Markup Language:** Bypasses sanitizers by rendering plain text as UI components.
+- **Widgets:**
+  - **Collapse:** Collapsible `<details>` section for hiding verbose content.
+  - **Callout:** Styled alert boxes (info, warning, error, success).
+  - **Tabs:** Interactive tabbed panels for organizing content.
+  - **Badge:** Inline pill for status or versions.
+- **VDOM-Safe Injection:** Preserves the host page's Virtual DOM by using hidden wrappers instead of replacing nodes.
+- **Shadow DOM Isolation:** Ensures widget styles are completely isolated from the host page.
+- **Streaming Support:** MutationObserver handles real-time token streaming and hydrates widgets as they complete.
+- **Cross-Platform:** Works on ChatGPT, Claude, Gemini, Copilot, and Bing Chat.
+
 ## How it works
 
 AI chat interfaces (ChatGPT, Claude, Gemini, Copilot, etc.) sanitise HTML before rendering it. This extension takes a completely different approach: it defines a **custom plain-text markup language** that slips through every sanitiser undetected, because it looks like ordinary prose to the platform.
