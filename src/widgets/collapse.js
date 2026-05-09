@@ -50,6 +50,7 @@ function renderCollapse(node) {
       list-style: none;
       display: flex;
       align-items: center;
+      justify-content: space-between;
       gap: 8px;
       background: #f9fafb;
       border-bottom: 1px solid transparent;
@@ -66,6 +67,21 @@ function renderCollapse(node) {
       background: #f3f4f6;
     }
     details[open] summary::before { transform: rotate(90deg); }
+    .copy-btn {
+      margin-left: auto;
+      padding: 4px 8px;
+      font-size: 0.75em;
+      font-weight: normal;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background: #ffffff;
+      cursor: pointer;
+      color: #374151;
+      transition: background 0.15s;
+    }
+    .copy-btn:hover {
+      background: #f3f4f6;
+    }
     .content {
       padding: 12px 14px;
       white-space: pre-wrap;
@@ -75,7 +91,30 @@ function renderCollapse(node) {
 
   const details = document.createElement('details');
   const summary = document.createElement('summary');
-  summary.textContent = title;
+
+  const titleSpan = document.createElement('span');
+  titleSpan.textContent = title;
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = 'Copy';
+  copyBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(content).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    } else {
+      console.error('Clipboard API not supported');
+    }
+  });
+
+  summary.appendChild(titleSpan);
+  summary.appendChild(copyBtn);
 
   const contentDiv = document.createElement('div');
   contentDiv.classList.add('content');
