@@ -75,6 +75,24 @@ function renderTabs(node) {
       border-bottom-color: #1d4ed8;
       background: #ffffff;
     }
+    .copy-btn {
+      margin-left: auto;
+      margin-right: 8px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      font-family: inherit;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      background: #ffffff;
+      cursor: pointer;
+      color: #374151;
+      transition: background 0.15s;
+    }
+    .copy-btn:hover {
+      background: #f3f4f6;
+    }
     .tab-panel {
       display: none;
       padding: 14px;
@@ -89,6 +107,25 @@ function renderTabs(node) {
 
   const tabBar = document.createElement('div');
   tabBar.classList.add('tab-bar');
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.textContent = 'Copy';
+  copyBtn.type = 'button';
+  copyBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(raw).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+      }).catch(err => {
+        console.error('Failed to copy: ', err);
+      });
+    } else {
+      console.error('Clipboard API not supported');
+    }
+  });
 
   const panels = [];
   const panelContainer = document.createElement('div');
@@ -118,6 +155,8 @@ function renderTabs(node) {
 
     tabBar.appendChild(btn);
   });
+
+  tabBar.appendChild(copyBtn);
 
   container.appendChild(tabBar);
   container.appendChild(panelContainer);

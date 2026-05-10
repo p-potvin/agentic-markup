@@ -38,8 +38,8 @@ describe('renderCollapse()', () => {
 
   test('summary text matches the attributes.summary value', () => {
     const el = renderCollapse(makeNode('My Section', 'body'));
-    const summary = el.shadowRoot.querySelector('summary');
-    expect(summary.textContent).toBe('My Section');
+    const titleSpan = el.shadowRoot.querySelector('summary span');
+    expect(titleSpan.textContent).toBe('My Section');
   });
 
   test('content div text matches rawBody', () => {
@@ -50,20 +50,67 @@ describe('renderCollapse()', () => {
 
   test('uses "Details" fallback when attributes.summary is absent', () => {
     const el = renderCollapse(makeNode(undefined, 'body'));
-    const summary = el.shadowRoot.querySelector('summary');
-    expect(summary.textContent).toBe('Details');
+    const titleSpan = el.shadowRoot.querySelector('summary span');
+    expect(titleSpan.textContent).toBe('Details');
   });
 
   test('uses "Details" fallback when attributes.summary is empty string', () => {
     const el = renderCollapse(makeNode('', 'body'));
-    const summary = el.shadowRoot.querySelector('summary');
-    expect(summary.textContent).toBe('Details');
+    const titleSpan = el.shadowRoot.querySelector('summary span');
+    expect(titleSpan.textContent).toBe('Details');
   });
 
   test('handles empty rawBody gracefully', () => {
     const el = renderCollapse(makeNode('T', ''));
     const contentDiv = el.shadowRoot.querySelector('.content');
     expect(contentDiv.textContent).toBe('');
+  });
+
+  test('renders a copy button', () => {
+    const el = renderCollapse(makeNode('T', 'C'));
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+    expect(btn).not.toBeNull();
+    expect(btn.textContent).toBe('Copy');
+  });
+
+  test('copy button calls clipboard API and updates text', async () => {
+    jest.useFakeTimers();
+    let clipboardText = '';
+    const mockWriteText = jest.fn().mockImplementation((text) => {
+      clipboardText = text;
+      return Promise.resolve();
+    });
+
+    // Mock navigator.clipboard
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: mockWriteText
+      }
+    });
+
+    const el = renderCollapse(makeNode('T', 'Content to copy'));
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    jest.spyOn(clickEvent, 'stopPropagation');
+    jest.spyOn(clickEvent, 'preventDefault');
+
+    btn.dispatchEvent(clickEvent);
+
+    expect(clickEvent.stopPropagation).toHaveBeenCalled();
+    expect(clickEvent.preventDefault).toHaveBeenCalled();
+    expect(mockWriteText).toHaveBeenCalledWith('Content to copy');
+    expect(clipboardText).toBe('Content to copy');
+
+    // Wait for the promise to resolve
+    await Promise.resolve();
+
+    expect(btn.textContent).toBe('Copied!');
+
+    jest.advanceTimersByTime(2000);
+    expect(btn.textContent).toBe('Copy');
+
+    jest.useRealTimers();
   });
 });
 

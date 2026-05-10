@@ -93,5 +93,52 @@ describe('renderTabs()', () => {
     const buttons = el.shadowRoot.querySelectorAll('.tab-btn');
     expect(buttons).toHaveLength(0);
   });
+
+  test('renders a copy button', () => {
+    const el = renderTabs(makeNode('A', 'body'));
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+    expect(btn).not.toBeNull();
+    expect(btn.textContent).toBe('Copy');
+  });
+
+  test('copy button calls clipboard API and updates text', async () => {
+    jest.useFakeTimers();
+    let clipboardText = '';
+    const mockWriteText = jest.fn().mockImplementation((text) => {
+      clipboardText = text;
+      return Promise.resolve();
+    });
+
+    // Mock navigator.clipboard
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: mockWriteText
+      }
+    });
+
+    const el = renderTabs(makeNode('A|B', 'body A\n---\nbody B'));
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    jest.spyOn(clickEvent, 'stopPropagation');
+    jest.spyOn(clickEvent, 'preventDefault');
+
+    btn.dispatchEvent(clickEvent);
+
+    expect(clickEvent.stopPropagation).toHaveBeenCalled();
+    expect(clickEvent.preventDefault).toHaveBeenCalled();
+    expect(mockWriteText).toHaveBeenCalledWith('body A\n---\nbody B');
+    expect(clipboardText).toBe('body A\n---\nbody B');
+
+    // Wait for the promise to resolve
+    await Promise.resolve();
+
+    expect(btn.textContent).toBe('Copied!');
+
+    jest.advanceTimersByTime(2000);
+    expect(btn.textContent).toBe('Copy');
+
+    jest.useRealTimers();
+  });
 });
 
