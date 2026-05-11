@@ -11,6 +11,7 @@ A browser extension (Chrome & Firefox) using a proprietary markup language to fu
   - **Callout:** Styled alert boxes (info, warning, error, success).
   - **Tabs:** Interactive tabbed panels for organizing content.
   - **Badge:** Inline pill for status or versions.
+- **Copy to Clipboard:** Native copy buttons embedded in block widgets (`collapse` and `tabs`) to easily extract AI-generated raw content.
 - **VDOM-Safe Injection:** Preserves the host page's Virtual DOM by using hidden wrappers instead of replacing nodes.
 - **Shadow DOM Isolation:** Ensures widget styles are completely isolated from the host page.
 - **Streaming Support:** MutationObserver handles real-time token streaming and hydrates widgets as they complete.
