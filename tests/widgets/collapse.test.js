@@ -73,7 +73,7 @@ describe('renderCollapse()', () => {
     expect(btn.textContent).toBe('Copy');
   });
 
-  test('copy button calls clipboard API and updates text', async () => {
+  test('copy button calls clipboard API and updates text using node.rawBody', async () => {
     jest.useFakeTimers();
     let clipboardText = '';
     const mockWriteText = jest.fn().mockImplementation((text) => {
@@ -109,6 +109,41 @@ describe('renderCollapse()', () => {
 
     jest.advanceTimersByTime(2000);
     expect(btn.textContent).toBe('Copy');
+
+    jest.useRealTimers();
+  });
+
+  test('copy button handles missing rawBody gracefully', async () => {
+    jest.useFakeTimers();
+    let clipboardText = '';
+    const mockWriteText = jest.fn().mockImplementation((text) => {
+      clipboardText = text;
+      return Promise.resolve();
+    });
+
+    // Mock navigator.clipboard
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: mockWriteText
+      }
+    });
+
+    // Create node explicitly without rawBody
+    const node = {
+      type: 'containerDirective',
+      name: 'collapse',
+      attributes: { summary: 'T' },
+      children: [],
+    };
+
+    const el = renderCollapse(node);
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    btn.dispatchEvent(clickEvent);
+
+    expect(mockWriteText).toHaveBeenCalledWith('');
+    expect(clipboardText).toBe('');
 
     jest.useRealTimers();
   });
