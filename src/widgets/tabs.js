@@ -115,8 +115,9 @@ function renderTabs(node) {
   copyBtn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    const textToCopy = typeof node.rawBody === 'string' ? node.rawBody : '';
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(raw).then(() => {
+      navigator.clipboard.writeText(textToCopy).then(() => {
         copyBtn.textContent = 'Copied!';
         setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
       }).catch(err => {
