@@ -66,6 +66,23 @@ describe('renderCollapse()', () => {
     expect(contentDiv.textContent).toBe('');
   });
 
+  test('applies syntax highlighting when highlight attribute is present', () => {
+    const node = makeNode('Code', 'const x = 42;');
+    node.attributes.highlight = 'javascript';
+    const el = renderCollapse(node);
+    const contentDiv = el.shadowRoot.querySelector('.content');
+    expect(contentDiv.innerHTML).toContain('<span class="hl-keyword">const</span>');
+    expect(contentDiv.innerHTML).toContain('<span class="hl-number">42</span>');
+  });
+
+  test('escapes HTML when highlight attribute is present', () => {
+    const node = makeNode('Code', 'const x = "<script>";');
+    node.attributes.highlight = 'javascript';
+    const el = renderCollapse(node);
+    const contentDiv = el.shadowRoot.querySelector('.content');
+    expect(contentDiv.innerHTML).toContain('&lt;script&gt;');
+  });
+
   test('renders a copy button', () => {
     const el = renderCollapse(makeNode('T', 'C'));
     const btn = el.shadowRoot.querySelector('.copy-btn');

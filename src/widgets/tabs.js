@@ -1,6 +1,7 @@
 'use strict';
 
 const { getNodeText } = require('../parser');
+const { applyHighlight } = require('../highlighter');
 
 /**
  * Tabs Widget
@@ -100,6 +101,10 @@ function renderTabs(node) {
       line-height: 1.6;
     }
     .tab-panel.active { display: block; }
+    .hl-keyword { color: #859900; }
+    .hl-string { color: #2aa198; }
+    .hl-comment { color: #93a1a1; font-style: italic; }
+    .hl-number { color: #d33682; }
   `;
 
   const container = document.createElement('div');
@@ -128,6 +133,7 @@ function renderTabs(node) {
     }
   });
 
+  const highlightLang = (node.attributes && node.attributes.highlight) || '';
   const panels = [];
   const panelContainer = document.createElement('div');
 
@@ -143,7 +149,14 @@ function renderTabs(node) {
     const panel = document.createElement('div');
     panel.classList.add('tab-panel');
     if (i === 0) panel.classList.add('active');
-    panel.textContent = tabs[i] !== undefined ? tabs[i] : '';
+
+    const panelContent = tabs[i] !== undefined ? tabs[i] : '';
+    if (highlightLang) {
+      panel.innerHTML = applyHighlight(panelContent, highlightLang);
+    } else {
+      panel.textContent = panelContent;
+    }
+
     panels.push(panel);
     panelContainer.appendChild(panel);
 

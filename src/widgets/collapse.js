@@ -1,6 +1,7 @@
 'use strict';
 
 const { getNodeText } = require('../parser');
+const { applyHighlight } = require('../highlighter');
 
 /**
  * Collapse Widget
@@ -87,6 +88,10 @@ function renderCollapse(node) {
       white-space: pre-wrap;
       line-height: 1.6;
     }
+    .hl-keyword { color: #859900; }
+    .hl-string { color: #2aa198; }
+    .hl-comment { color: #93a1a1; font-style: italic; }
+    .hl-number { color: #d33682; }
   `;
 
   const details = document.createElement('details');
@@ -117,9 +122,14 @@ function renderCollapse(node) {
   summary.appendChild(titleSpan);
   summary.appendChild(copyBtn);
 
+  const highlightLang = (node.attributes && node.attributes.highlight) || '';
   const contentDiv = document.createElement('div');
   contentDiv.classList.add('content');
-  contentDiv.textContent = content;
+  if (highlightLang) {
+    contentDiv.innerHTML = applyHighlight(content, highlightLang);
+  } else {
+    contentDiv.textContent = content;
+  }
 
   details.appendChild(summary);
   details.appendChild(contentDiv);

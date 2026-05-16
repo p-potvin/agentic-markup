@@ -88,6 +88,23 @@ describe('renderTabs()', () => {
     expect(buttons).toHaveLength(0);
   });
 
+  test('applies syntax highlighting when highlight attribute is present', () => {
+    const node = makeNode('JS', 'const x = 42;');
+    node.attributes.highlight = 'javascript';
+    const el = renderTabs(node);
+    const panel = el.shadowRoot.querySelector('.tab-panel');
+    expect(panel.innerHTML).toContain('<span class="hl-keyword">const</span>');
+    expect(panel.innerHTML).toContain('<span class="hl-number">42</span>');
+  });
+
+  test('escapes HTML when highlight attribute is present', () => {
+    const node = makeNode('JS', 'const x = "<script>";');
+    node.attributes.highlight = 'javascript';
+    const el = renderTabs(node);
+    const panel = el.shadowRoot.querySelector('.tab-panel');
+    expect(panel.innerHTML).toContain('&lt;script&gt;');
+  });
+
   test('handles missing titles attribute (renders no tabs)', () => {
     const el = renderTabs(makeNode(undefined, ''));
     const buttons = el.shadowRoot.querySelectorAll('.tab-btn');
