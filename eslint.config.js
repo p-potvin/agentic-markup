@@ -25,6 +25,8 @@ export default [
         exports: "readonly",
         Text: "readonly",
         test: "readonly",
+        navigator: "readonly",
+        setTimeout: "readonly"
       }
     },
     rules: {

@@ -37,6 +37,11 @@ describe('buildWidget()', () => {
     expect(el).toBeInstanceOf(HTMLElement);
   });
 
+  test('returns an element for code containerDirective', () => {
+    const el = buildWidget(makeContainer('code', { language: 'js' }, 'console.log("hello");'));
+    expect(el).toBeInstanceOf(HTMLElement);
+  });
+
   test('returns null for a node with no name', () => {
     expect(buildWidget({})).toBeNull();
     expect(buildWidget(null)).toBeNull();

@@ -20,6 +20,19 @@ Plain text in DOM                Rendered output
 :::
 ```
 
+## Features
+
+- **Custom plain-text markup language**: Bypasses HTML sanitizers by looking like ordinary prose.
+- **FSM Tokenizer & AST Parser**: Robust line-by-line parsing tracking nesting depths.
+- **VDOM-Safe Injection**: Never deletes original text nodes to avoid reconciliation errors in frameworks like React, Angular, or Vue.
+- **Shadow DOM Isolation**: Ensures widget styles are isolated from the host page.
+- **Streaming Support**: Hydrates widgets even when text is dynamically streaming in.
+- **Built-in Widgets**:
+  - `collapse`: Collapsible sections for hiding details.
+  - `callout`: Styled notes (info, warning, error, success).
+  - `tabs`: Tabbed panels for grouping related content.
+  - `badge`: Inline pills for statuses and tags.
+
 ## Markup Syntax
 
 Tell the AI to wrap its output in one of these markers.
