@@ -4,6 +4,7 @@ A browser extension (Chrome & Firefox) using a proprietary markup language to fu
 
 
 ## Features
+- **Mermaid Diagrams:** Render Mermaid text into an SVG image within a block widget (`:::mermaid`).
 
 - **Custom Plain-Text Markup Language:** Bypasses sanitizers by rendering plain text as UI components.
 - **Widgets:**
