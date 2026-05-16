@@ -73,6 +73,53 @@ describe('renderCollapse()', () => {
     expect(btn.textContent).toBe('Copy');
   });
 
+  test('copy button uses document.execCommand fallback if clipboard API is undefined', () => {
+    jest.useFakeTimers();
+
+    // Save original clipboard and execCommand
+    const originalClipboard = navigator.clipboard;
+    const originalExecCommand = document.execCommand;
+
+    // Mock navigator.clipboard to be undefined
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true,
+    });
+
+    let copiedText = '';
+    document.execCommand = jest.fn((cmd) => {
+      if (cmd === 'copy') {
+        const textarea = document.activeElement;
+        if (textarea && textarea.tagName === 'TEXTAREA') {
+          copiedText = textarea.value;
+        }
+        return true;
+      }
+      return false;
+    });
+
+    const el = renderCollapse(makeNode('T', 'Fallback content'));
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    btn.dispatchEvent(clickEvent);
+
+    expect(document.execCommand).toHaveBeenCalledWith('copy');
+    expect(copiedText).toBe('Fallback content');
+    expect(btn.textContent).toBe('Copied!');
+
+    jest.advanceTimersByTime(2000);
+    expect(btn.textContent).toBe('Copy');
+
+    // Restore
+    Object.defineProperty(navigator, 'clipboard', {
+      value: originalClipboard,
+      configurable: true,
+    });
+    document.execCommand = originalExecCommand;
+    jest.useRealTimers();
+  });
+
   test('copy button calls clipboard API and updates text', async () => {
     jest.useFakeTimers();
     let clipboardText = '';
@@ -81,11 +128,13 @@ describe('renderCollapse()', () => {
       return Promise.resolve();
     });
 
+    // Save original clipboard and execCommand
+    const originalClipboard = navigator.clipboard;
+
     // Mock navigator.clipboard
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: mockWriteText
-      }
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: mockWriteText },
+      configurable: true,
     });
 
     const el = renderCollapse(makeNode('T', 'Content to copy'));
@@ -109,6 +158,12 @@ describe('renderCollapse()', () => {
 
     jest.advanceTimersByTime(2000);
     expect(btn.textContent).toBe('Copy');
+
+    // Restore
+    Object.defineProperty(navigator, 'clipboard', {
+      value: originalClipboard,
+      configurable: true,
+    });
 
     jest.useRealTimers();
   });

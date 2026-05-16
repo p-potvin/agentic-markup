@@ -115,15 +115,42 @@ function renderTabs(node) {
   copyBtn.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const fallbackCopy = () => {
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = raw;
+        // Avoid scrolling to bottom
+        textarea.style.top = '0';
+        textarea.style.left = '0';
+        textarea.style.position = 'fixed';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textarea);
+
+        if (successful) {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+        } else {
+          console.error('Fallback copy failed');
+        }
+      } catch (err) {
+        console.error('Fallback copy error: ', err);
+      }
+    };
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(raw).then(() => {
         copyBtn.textContent = 'Copied!';
         setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
       }).catch(err => {
         console.error('Failed to copy: ', err);
+        fallbackCopy();
       });
     } else {
-      console.error('Clipboard API not supported');
+      fallbackCopy();
     }
   });
 
