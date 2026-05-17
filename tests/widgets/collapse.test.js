@@ -98,11 +98,12 @@ describe('renderCollapse()', () => {
       return Promise.resolve();
     });
 
-    // Mock navigator.clipboard
-    Object.assign(navigator, {
-      clipboard: {
+    // Mock navigator.clipboard using Object.defineProperty
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
         writeText: mockWriteText
-      }
+      },
+      configurable: true
     });
 
     const el = renderCollapse(makeNode('T', 'Content to copy'));
@@ -138,11 +139,12 @@ describe('renderCollapse()', () => {
       return Promise.resolve();
     });
 
-    // Mock navigator.clipboard
-    Object.assign(navigator, {
-      clipboard: {
+    // Mock navigator.clipboard using Object.defineProperty
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
         writeText: mockWriteText
-      }
+      },
+      configurable: true
     });
 
     // Create node explicitly without rawBody
@@ -161,6 +163,39 @@ describe('renderCollapse()', () => {
 
     expect(mockWriteText).toHaveBeenCalledWith('');
     expect(clipboardText).toBe('');
+
+    jest.useRealTimers();
+  });
+
+  test('copy button uses execCommand fallback when navigator.clipboard is absent', () => {
+    jest.useFakeTimers();
+
+    // Ensure navigator.clipboard is undefined
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true
+    });
+
+    const mockExecCommand = jest.fn().mockReturnValue(true);
+    document.execCommand = mockExecCommand;
+
+    const el = renderCollapse(makeNode('T', 'Fallback text'));
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    btn.dispatchEvent(clickEvent);
+
+    expect(mockExecCommand).toHaveBeenCalledWith('copy');
+
+    // Check if a textarea was created with the correct value
+    // Since it's appended to document.body and then removed synchronously,
+    // we can only verify the execCommand call in this simple test,
+    // unless we mock document.createElement.
+    // However, execCommand implies the fallback block executed.
+    expect(btn.textContent).toBe('Copied!');
+
+    jest.advanceTimersByTime(2000);
+    expect(btn.textContent).toBe('Copy');
 
     jest.useRealTimers();
   });

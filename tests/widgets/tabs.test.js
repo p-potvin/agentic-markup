@@ -126,11 +126,12 @@ describe('renderTabs()', () => {
       return Promise.resolve();
     });
 
-    // Mock navigator.clipboard
-    Object.assign(navigator, {
-      clipboard: {
+    // Mock navigator.clipboard using Object.defineProperty
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
         writeText: mockWriteText
-      }
+      },
+      configurable: true
     });
 
     const el = renderTabs(makeNode('A|B', 'body A\n---\nbody B'));
@@ -166,11 +167,12 @@ describe('renderTabs()', () => {
       return Promise.resolve();
     });
 
-    // Mock navigator.clipboard
-    Object.assign(navigator, {
-      clipboard: {
+    // Mock navigator.clipboard using Object.defineProperty
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
         writeText: mockWriteText
-      }
+      },
+      configurable: true
     });
 
     // Create node explicitly without rawBody
@@ -189,6 +191,34 @@ describe('renderTabs()', () => {
 
     expect(mockWriteText).toHaveBeenCalledWith('');
     expect(clipboardText).toBe('');
+
+    jest.useRealTimers();
+  });
+
+  test('copy button uses execCommand fallback when navigator.clipboard is absent', () => {
+    jest.useFakeTimers();
+
+    // Ensure navigator.clipboard is undefined
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true
+    });
+
+    const mockExecCommand = jest.fn().mockReturnValue(true);
+    document.execCommand = mockExecCommand;
+
+    const el = renderTabs(makeNode('A', 'Fallback text'));
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    btn.dispatchEvent(clickEvent);
+
+    expect(mockExecCommand).toHaveBeenCalledWith('copy');
+
+    expect(btn.textContent).toBe('Copied!');
+
+    jest.advanceTimersByTime(2000);
+    expect(btn.textContent).toBe('Copy');
 
     jest.useRealTimers();
   });
