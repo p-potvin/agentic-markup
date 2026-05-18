@@ -121,15 +121,29 @@ function renderTabs(node) {
     e.preventDefault();
     e.stopPropagation();
     const textToCopy = typeof node.rawBody === 'string' ? node.rawBody : '';
+    const showSuccess = () => {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+    };
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(textToCopy).then(() => {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
-      }).catch(err => {
+      navigator.clipboard.writeText(textToCopy).then(showSuccess).catch(err => {
         console.error('Failed to copy: ', err);
       });
     } else {
-      console.error('Clipboard API not supported');
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = textToCopy;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showSuccess();
+      } catch (err) {
+        console.error('Fallback copy failed: ', err);
+      }
     }
   });
 
