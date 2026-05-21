@@ -66,6 +66,23 @@ describe('renderCollapse()', () => {
     expect(contentDiv.textContent).toBe('');
   });
 
+  test('applies syntax highlighting when highlight attribute is present', () => {
+    const node = makeNode('Code', 'const x = 42;');
+    node.attributes.highlight = 'javascript';
+    const el = renderCollapse(node);
+    const contentDiv = el.shadowRoot.querySelector('.content');
+    expect(contentDiv.innerHTML).toContain('<span class="hl-keyword">const</span>');
+    expect(contentDiv.innerHTML).toContain('<span class="hl-number">42</span>');
+  });
+
+  test('escapes HTML when highlight attribute is present', () => {
+    const node = makeNode('Code', 'const x = "<script>";');
+    node.attributes.highlight = 'javascript';
+    const el = renderCollapse(node);
+    const contentDiv = el.shadowRoot.querySelector('.content');
+    expect(contentDiv.innerHTML).toContain('&lt;script&gt;');
+  });
+
   test('renders a copy button', () => {
     const el = renderCollapse(makeNode('T', 'C'));
     const btn = el.shadowRoot.querySelector('.copy-btn');
@@ -164,6 +181,75 @@ describe('renderCollapse()', () => {
       value: originalClipboard,
       configurable: true,
     });
+
+    jest.useRealTimers();
+  });
+
+  test('copy button handles missing rawBody gracefully', async () => {
+    jest.useFakeTimers();
+    let clipboardText = '';
+    const mockWriteText = jest.fn().mockImplementation((text) => {
+      clipboardText = text;
+      return Promise.resolve();
+    });
+
+    // Mock navigator.clipboard using Object.defineProperty
+    Object.defineProperty(navigator, 'clipboard', {
+      value: {
+        writeText: mockWriteText
+      },
+      configurable: true
+    });
+
+    // Create node explicitly without rawBody
+    const node = {
+      type: 'containerDirective',
+      name: 'collapse',
+      attributes: { summary: 'T' },
+      children: [],
+    };
+
+    const el = renderCollapse(node);
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    btn.dispatchEvent(clickEvent);
+
+    expect(mockWriteText).toHaveBeenCalledWith('');
+    expect(clipboardText).toBe('');
+
+    jest.useRealTimers();
+  });
+
+  test('copy button uses execCommand fallback when navigator.clipboard is absent', () => {
+    jest.useFakeTimers();
+
+    // Ensure navigator.clipboard is undefined
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true
+    });
+
+    const mockExecCommand = jest.fn().mockReturnValue(true);
+    document.execCommand = mockExecCommand;
+
+    const el = renderCollapse(makeNode('T', 'Fallback text'));
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+    btn.dispatchEvent(clickEvent);
+
+    expect(mockExecCommand).toHaveBeenCalledWith('copy');
+
+    // Check if a textarea was created with the correct value
+    // Since it's appended to document.body and then removed synchronously,
+    // we can only verify the execCommand call in this simple test,
+    // unless we mock document.createElement.
+    // However, execCommand implies the fallback block executed.
+    expect(btn.textContent).toBe('Copied!');
+
+    jest.advanceTimersByTime(2000);
+    expect(btn.textContent).toBe('Copy');
 
     jest.useRealTimers();
   });

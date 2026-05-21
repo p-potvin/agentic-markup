@@ -5,6 +5,7 @@ const { renderCollapse } = require('./widgets/collapse');
 const { renderCallout }  = require('./widgets/callout');
 const { renderTabs }     = require('./widgets/tabs');
 const { renderBadge }    = require('./widgets/badge');
+const { renderMermaid }  = require('./widgets/mermaid');
 
 /**
  * Map an AST directive node to a DOM element.
@@ -23,6 +24,7 @@ function buildWidget(node) {
     case 'callout':  return renderCallout(node);
     case 'tabs':     return renderTabs(node);
     case 'badge':    return renderBadge(node);
+    case 'mermaid':  return renderMermaid(node);
     default:         return null;
   }
 }
