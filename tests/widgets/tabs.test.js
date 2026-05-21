@@ -118,7 +118,54 @@ describe('renderTabs()', () => {
     expect(btn.textContent).toBe('Copy');
   });
 
-  test('copy button calls clipboard API and updates text using node.rawBody', async () => {
+  test('copy button uses document.execCommand fallback if clipboard API is undefined', () => {
+    jest.useFakeTimers();
+
+    // Save original clipboard and execCommand
+    const originalClipboard = navigator.clipboard;
+    const originalExecCommand = document.execCommand;
+
+    // Mock navigator.clipboard to be undefined
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true,
+    });
+
+    let copiedText = '';
+    document.execCommand = jest.fn((cmd) => {
+      if (cmd === 'copy') {
+        const textarea = document.activeElement;
+        if (textarea && textarea.tagName === 'TEXTAREA') {
+          copiedText = textarea.value;
+        }
+        return true;
+      }
+      return false;
+    });
+
+    const el = renderTabs(makeNode('A|B', 'body A\n---\nbody B'));
+    const btn = el.shadowRoot.querySelector('.copy-btn');
+    const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+
+    btn.dispatchEvent(clickEvent);
+
+    expect(document.execCommand).toHaveBeenCalledWith('copy');
+    expect(copiedText).toBe('body A\n---\nbody B');
+    expect(btn.textContent).toBe('Copied!');
+
+    jest.advanceTimersByTime(2000);
+    expect(btn.textContent).toBe('Copy');
+
+    // Restore
+    Object.defineProperty(navigator, 'clipboard', {
+      value: originalClipboard,
+      configurable: true,
+    });
+    document.execCommand = originalExecCommand;
+    jest.useRealTimers();
+  });
+
+  test('copy button calls clipboard API and updates text', async () => {
     jest.useFakeTimers();
     let clipboardText = '';
     const mockWriteText = jest.fn().mockImplementation((text) => {
@@ -126,12 +173,13 @@ describe('renderTabs()', () => {
       return Promise.resolve();
     });
 
-    // Mock navigator.clipboard using Object.defineProperty
+    // Save original clipboard and execCommand
+    const originalClipboard = navigator.clipboard;
+
+    // Mock navigator.clipboard
     Object.defineProperty(navigator, 'clipboard', {
-      value: {
-        writeText: mockWriteText
-      },
-      configurable: true
+      value: { writeText: mockWriteText },
+      configurable: true,
     });
 
     const el = renderTabs(makeNode('A|B', 'body A\n---\nbody B'));
@@ -155,6 +203,12 @@ describe('renderTabs()', () => {
 
     jest.advanceTimersByTime(2000);
     expect(btn.textContent).toBe('Copy');
+
+    // Restore
+    Object.defineProperty(navigator, 'clipboard', {
+      value: originalClipboard,
+      configurable: true,
+    });
 
     jest.useRealTimers();
   });
