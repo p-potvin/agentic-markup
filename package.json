@@ -11,7 +11,7 @@
     "lint": "eslint src/**/*.js extension/**/*.js tests/**/*.js"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.0",
+    "@babel/core": "^7.29.6",
     "@babel/preset-env": "^7.29.5",
     "babel-jest": "^30.4.1",
     "esbuild": "^0.28.1",
@@ -20,6 +20,6 @@
     "jest-environment-jsdom": "^29.7.0"
   },
   "dependencies": {
-    "mermaid": "^11.15.0"
+    "mermaid": "^11.16.1"
   }
 }
