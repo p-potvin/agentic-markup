@@ -20,6 +20,6 @@
     "jest-environment-jsdom": "^29.7.0"
   },
   "dependencies": {
-    "mermaid": "^11.16.1"
+    "mermaid": "^12.2.0"
   }
 }
